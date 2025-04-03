@@ -18,7 +18,7 @@ export class PreRegisterCpfDto {
     @MinLength(11)
     @MaxLength(11)
     cpf: string;
-    nome: string;
+    username: string;
     email: string;
     password: string;
 

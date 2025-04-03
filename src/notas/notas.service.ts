@@ -19,6 +19,7 @@ export class NotasService {
         private readonly userService: UserService
     ) {}
 
+    // Cria uma nova nota e pre-cadastra o CPF do destinatário se ele não estiver cadastrado.
     async create(notasDto: NotasDto): Promise<Notas> {
         const extractCPF = (data: any): string | null => {
             if (typeof data.xml === 'string') {
@@ -64,6 +65,7 @@ export class NotasService {
         return await this.notasRepository.save(nota);
     }
 
+    // Busca as notas pelo CPF do destinatário.
     async findByCpf(cpf: string): Promise<Notas[]> {
         return await this.notasRepository.find({ where: { cpf: cpf } });
     }

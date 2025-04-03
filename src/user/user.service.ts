@@ -15,7 +15,7 @@ export class UserService {
         private readonly mailerService: MailerService,
     ) {}
 
-    //completa o cadastro
+    //completa o cadastro e verifica o email.
     async completeRegister(cpf: string, completeRegisterDto: CompleteRegisterDto): Promise<any> {
         const user = await this.userRepository.findOne({ where: { cpf } });
 
@@ -23,7 +23,7 @@ export class UserService {
             throw new NotFoundException('Usuário não encontrado.');
         }
 
-        user.username = completeRegisterDto.nome;
+        user.username = completeRegisterDto.username;
         user.email = completeRegisterDto.email;
         user.passwordHash = bcryptHashSync(completeRegisterDto.password, 6);
         user.verificationToken = uuidv4(); 
@@ -75,7 +75,7 @@ export class UserService {
         return { message: 'Pre-registration with CPF successful.' };
     }
 
-    // Enviar email de verificação.
+    // Enviar email de verificação do user
     async sendVerificationEmail(user: User) {
         const verificationLink = `google.com?token=${user.verificationToken}`; //redireciona user para tela de verificação.
 
@@ -96,7 +96,7 @@ export class UserService {
         }
     }
 
-    //buscar user pelo cpf.
+    //buscar user pelo cpf ,  retorna dados do mesmo.
     async findByCpf(cpf: string): Promise<UserDto | null> {
         const userFound = await this.userRepository.findOne({
             where: { cpf },
@@ -117,7 +117,7 @@ export class UserService {
         };
     }
 
-    //criando token de redefinição de senha
+    //criando token de redefinição de senha.
     async generateResetToken(email: string) {
         const user = await this.userRepository.findOne({ where: { email } });
         if (!user) {
@@ -129,7 +129,7 @@ export class UserService {
         return user.resetToken;
     }
 
-    //Enviar email de redefinição de senha
+    //Enviar email de redefinição de senha.
     async sendResetPasswordEmail(email: string, token: string) {
         const resetLink = `http://localhost:3009/user/reset-password/${token}`;
         await this.mailerService.sendMail({
@@ -139,7 +139,7 @@ export class UserService {
         });
     }
 
-    //Validar token
+    //Validar token de redefinição de senha.
     async validateResetToken(token: string) {
         const user = await this.userRepository.findOne({ where: { resetToken: token } });
 
@@ -150,7 +150,7 @@ export class UserService {
         return user;
     }
 
-    //Redefinir senha
+    //Redefinir senha do user.
     async resetPassword(token: string, newPassword: string) {
         const user = await this.validateResetToken(token);
         user.passwordHash = bcryptHashSync(newPassword, 6);
