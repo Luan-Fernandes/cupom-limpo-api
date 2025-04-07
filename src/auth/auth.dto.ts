@@ -1,5 +1,5 @@
 export class AuthResponseDto {
-    token?: string; // Torna 'token' opcional
+    token?: string;
     expiresIn?: number;
     message?: string;
     completeCadastro?: boolean;

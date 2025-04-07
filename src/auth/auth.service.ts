@@ -19,6 +19,7 @@ export class AuthService {
     this.jwtExpirationTimeInSeconds = this.configService.get<number>('JWT_EXPIRATION_TIME') ?? 3600;
   }
 
+  // Verifica se o CPF foi cadastrado ou pre-cadastrado.
   async checkCpf(cpf: string): Promise<AuthResponseDto> {
     const foundUser = await this.usersService.findByCpf(cpf);
 
@@ -34,6 +35,7 @@ export class AuthService {
     };
   }
 
+  // Autentica o usuário.
   async signIn(cpf: string, password: string): Promise<AuthResponseDto> {
     const foundUser = await this.usersService.findByCpf(cpf);
 
@@ -58,6 +60,7 @@ export class AuthService {
     return { token, expiresIn: Number(this.jwtExpirationTimeInSeconds) };
   }
 
+  // consome o service de completar o cadastro para ser autenticado.
   async completeRegister(completeRegisterDto: CompleteRegisterDto): Promise<AuthResponseDto> {
     const result = await this.usersService.completeRegister(completeRegisterDto.cpf, completeRegisterDto);
     return { message: result.message, completeCadastro: false };

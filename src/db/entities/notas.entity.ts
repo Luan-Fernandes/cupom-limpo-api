@@ -10,8 +10,8 @@ export class Notas {
     @Column({ type: 'text' })
     xml: string;
 
-    @Column({ type: 'varchar', length: 11 })
-    cpf?: string;
+    @Column({ type: 'uuid' })
+    userId: string;
 
     @ManyToOne(() => User, (user) => user.notas, { onDelete: 'CASCADE' }) 
     @JoinColumn({ name: 'cpf', referencedColumnName: 'cpf' })

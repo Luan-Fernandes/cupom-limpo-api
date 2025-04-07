@@ -11,12 +11,14 @@ export class AuthController {
         private readonly userService: UserService
     ) {}
 
+    // Verifica se o CPF foi cadastrado ou pre-cadastrado.
     @HttpCode(HttpStatus.OK)
     @Post('check-cpf')
     async checkCpf(@Body('cpf') cpf: string): Promise<AuthResponseDto> {
         return this.authService.checkCpf(cpf);
     }
 
+    // Autentica o usuário.
     @HttpCode(HttpStatus.OK)
     @Post('login')
     async signIn(
@@ -26,6 +28,7 @@ export class AuthController {
         return this.authService.signIn(cpf, password);
     }
 
+    // Completa o cadastro e verifica o email.
     @HttpCode(HttpStatus.OK)
     @Put('complete-register')
     async completeRegister(
@@ -34,13 +37,17 @@ export class AuthController {
         return this.authService.completeRegister(completeRegisterDto);
     }
 
+    // Verifica o email do user.
     @Get('verify')
     async verifyEmail(@Query('token') token: string) {
         try {
             const result = await this.userService.verifyUser(token);
             return result;
         } catch (error) {
-            throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(error.message || 'Verification failed', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
