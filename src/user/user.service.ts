@@ -11,6 +11,7 @@ import { CompleteRegisterDto, PreRegisterCpfDto, UserDto } from './user.dto';
 import { hashSync as bcryptHashSync } from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config'; // importado para pegar a URL do frontend via .env
 
 @Injectable()
 export class UserService {
@@ -18,6 +19,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly mailerService: MailerService,
+    private readonly configService: ConfigService, // injetado via construtor
   ) {}
 
   //completa o cadastro e verifica o email.
@@ -123,7 +125,8 @@ export class UserService {
 
   // Enviar email de verificação do user
   async sendVerificationEmail(user: User) {
-    const verificationLink = `http://localhost:3009/auth/verify?token=${user.verificationToken}`; // Redireciona para um modal de confirmação de email.
+    const frontendUrl = this.configService.get<string>('VERIFICATION_EMAIL_URL');
+    const verificationLink = `${frontendUrl}/auth/verify?token=${user.verificationToken}`; // Redireciona para um modal de confirmação de email.
 
     try {
       await this.mailerService.sendMail({
@@ -218,7 +221,8 @@ export class UserService {
 
   //Enviar email de redefinição de senha.
   async sendResetPasswordEmail(email: string, token: string) {
-    const resetLink = `http://localhost:3009/user/reset-password/${token}`; //redireciona para um modal de redefinição de senha, pois o token tem que ser enviado como parametro.
+    const frontendUrl = this.configService.get<string>('RESET_PASSWORD_URL');
+    const resetLink = `${frontendUrl}/user/reset-password/${token}`; //redireciona para um modal de redefinição de senha, pois o token tem que ser enviado como parametro.
     await this.mailerService.sendMail({
       to: email,
       subject: 'Redefinição de senha',
