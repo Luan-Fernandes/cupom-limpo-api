@@ -126,33 +126,35 @@ export class UserService {
   // Enviar email de verificação do user
   async sendVerificationEmail(user: User) {
     const frontendUrl = this.configService.get<string>('VERIFICATION_EMAIL_URL');
-    const verificationLink = `${frontendUrl}/auth/verify?token=${user.verificationToken}`; // Redireciona para um modal de confirmação de email.
-
+    const verificationLink = `${frontendUrl}/auth/verify?token=${user.verificationToken}`;
+  
     try {
       await this.mailerService.sendMail({
         to: user.email,
         subject: 'Verifique seu email',
-        html: `
-                    <p>Olá,</p>
-                    <p>Por favor, clique no link abaixo para verificar seu email:</p>
-                    <a href="${verificationLink}">Verificar Email</a>
-                `,
+        template: 'verificationEmail',
+        context: {
+          name: user.username || 'usuário',
+          verificationLink,
+          year: new Date().getFullYear(),
+        },
       });
+  
       console.log(`Email de verificação enviado para ${user.email}`);
-
-      // Retorna um resultado de sucesso
+  
       return {
         success: true,
         message: 'Email de verificação enviado com sucesso',
       };
     } catch (error) {
-      // Lança a exceção em vez de retorná-la
+      console.error('Erro ao enviar e-mail:', error);
       throw new HttpException(
         'Falha ao enviar email de verificação',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
+  
 
   //verificar email do user.
   async verifyUser(token: string) {
@@ -222,12 +224,27 @@ export class UserService {
   //Enviar email de redefinição de senha.
   async sendResetPasswordEmail(email: string, token: string) {
     const frontendUrl = this.configService.get<string>('RESET_PASSWORD_URL');
-    const resetLink = `${frontendUrl}/user/reset-password/${token}`; //redireciona para um modal de redefinição de senha, pois o token tem que ser enviado como parametro.
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Redefinição de senha',
-      html: `<p>Clique <a href="${resetLink}">aqui</a> para redefinir sua senha.</p>`,
-    });
+    const resetLink = `${frontendUrl}/user/reset-password/${token}`;
+  
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Redefinição de senha',
+        template: 'resetPassword', // nome do template .hbs
+        context: {
+          resetLink,
+          year: new Date().getFullYear(),
+        },
+      });
+  
+      console.log(`Email de redefinição de senha enviado para ${email}`);
+    } catch (error) {
+      console.error('Erro ao enviar email de redefinição de senha:', error);
+      throw new HttpException(
+        'Falha ao enviar email de redefinição de senha',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   //Validar token de redefinição de senha.
