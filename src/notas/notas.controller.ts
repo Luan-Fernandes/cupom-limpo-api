@@ -15,37 +15,35 @@ export class NotasController {
     @Post('upload')
     @UseInterceptors(FileInterceptor('file'))
     async uploadXml(@UploadedFile() file: Express.Multer.File) {
-          const parser = new xml2js.Parser({ explicitArray: false });
-          const xml = file.buffer.toString('utf-8');
-
-          const jsonData = await new Promise((resolve, reject) => {
-              parser.parseString(xml, (err, result) => {
-                  if (err) reject(err);
-                  else resolve(result);
-              });
-          });
-
-          const xmlString = JSON.stringify(jsonData);
-          const id = uuidv4();
-
-          const savedNota = await this.notasService.create({ id, xml: xmlString });
-
-          // Usar o ID da nota salva para nomear o arquivo
-          const fileName = `${savedNota.id}.xml`;
-          const uploadPath = path.join(process.cwd(), 'uploads', 'xmls');
-
-          if (!fs.existsSync(uploadPath)) {
-              fs.mkdirSync(uploadPath, { recursive: true });
-          }
-
-          const filePath = path.join(uploadPath, fileName);
-
-          // Escrever o arquivo XML original
-          fs.writeFileSync(filePath, xml);
-
-          return savedNota;
-  }
-
+      try {
+        const parser = new xml2js.Parser({ explicitArray: false });
+        const xml = file.buffer.toString('utf-8');
+    
+        // Converte XML para JSON usando Promise nativa do xml2js
+        const jsonData = await parser.parseStringPromise(xml);
+        const xmlString = JSON.stringify(jsonData);
+        const id = uuidv4();
+    
+        // Salva a nota no banco
+        const savedNota = await this.notasService.create({ id, xml: xmlString });
+    
+        // Caminho onde o arquivo XML será salvo
+        const uploadDir = path.join(process.cwd(), 'uploads', 'xmls');
+        const fileName = `${savedNota.id}.xml`;
+        const filePath = path.join(uploadDir, fileName);
+    
+        // Cria o diretório se ele não existir
+        fs.mkdirSync(uploadDir, { recursive: true });
+    
+        // Escreve o arquivo XML original no disco
+        fs.writeFileSync(filePath, xml);
+    
+        return savedNota;
+      } catch (error) {
+        console.error('Erro ao processar o XML:', error);
+        throw new Error('Erro ao fazer upload do XML.');
+      }
+    }
     @UseGuards(AuthGuard)
     @Get()
     async findMyNotes(@Req() request: Request): Promise<Notas[]> {

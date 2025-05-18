@@ -39,6 +39,23 @@ export class NotasService {
     return null;
   }
 
+  private extractRazaoSocialEmitente(data: any): string | null {
+    if (typeof data.xml === 'string') {
+      try {
+        const xmlObject = JSON.parse(data.xml);
+        return (
+          xmlObject?.nfeProc?.NFe?.infNFe?.emit?.xNome ||
+          xmlObject?.NFe?.infNFe?.emit?.xNome ||
+          null
+        );
+      } catch (error) {
+        console.error('Erro ao extrair razão social do emitente:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
   // Extrai a chave de acesso do XML
   private extractChaveDeAcesso(data: any): string | null {
     if (typeof data.xml === 'string') {
@@ -52,6 +69,55 @@ export class NotasService {
         return id ? id.replace(/^NFe/, '') : null;
       } catch (error) {
         console.error('Erro ao extrair chave de acesso do XML:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private extractNuberNota(data: any): string | null {
+    if (typeof data.xml === 'string') {
+      try {
+        const xmlObject = JSON.parse(data.xml);
+        return (
+          xmlObject?.nfeProc?.NFe?.infNFe?.ide?.nNF ||
+          xmlObject?.NFe?.infNFe?.ide?.nNF || // Adicionando uma alternativa caso 'nfeProc' não exista diretamente
+          null
+        );
+      } catch (error) {
+        console.error('Erro ao extrair dados de emissão do XML:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private extractDataEmissao(data: any): string | null {
+    if (typeof data.xml === 'string') {
+      try {
+        const xmlObject = JSON.parse(data.xml);
+        return (
+          xmlObject?.nfeProc?.NFe?.infNFe?.ide?.dhEmi ||
+          xmlObject?.NFe?.infNFe?.ide?.dhEmi || // Adicionando uma alternativa caso 'nfeProc' não exista diretamente
+          null
+        );
+      } catch (error) {
+        console.error('Erro ao extrair dados de emissão do XML:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+  
+  private extractValue(data: any): string | null {
+    if (typeof data.xml === 'string') {
+      try {
+        const xmlObject = JSON.parse(data.xml);
+        return xmlObject?.nfeProc?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
+        xmlObject?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
+        null;
+      } catch (error) {
+        console.error('Erro ao extrair valor do XML:', error);
         return null;
       }
     }
@@ -85,6 +151,10 @@ export class NotasService {
     }
 
     const chaveDeAcesso = this.extractChaveDeAcesso(notasDto);
+    const dateEmissao = this.extractDataEmissao(notasDto);
+    const value = this.extractValue(notasDto);
+    const corporateReason = this.extractRazaoSocialEmitente(notasDto);
+    const numberNota = this.extractNuberNota(notasDto);
 
     if (!chaveDeAcesso) {
       throw new HttpException(
@@ -103,12 +173,17 @@ export class NotasService {
 
     const nota = this.notasRepository.create({
       xml: chaveDeAcesso ? chaveDeAcesso : '',
+      dateEmissao: dateEmissao ? dateEmissao : new Date(),
+      value: value ? parseFloat(value) : 0,
+      noteNumber: numberNota ? numberNota : '',
+      corporateReason: corporateReason ? corporateReason : '',
       userId: user.id,
       user: user,
     });
 
     return await this.notasRepository.save(nota);
   }
+  
 
   // Busca as notas do user.
   async findByUserId(userId: string): Promise<any[]> {
@@ -126,10 +201,15 @@ export class NotasService {
             `${nota.id}.xml`,
           );
           const xmlContent = await fs.readFile(filePath, 'utf-8');
-
+          
           return {
             id: nota.id,
             xml: xmlContent,
+            chaveDeAcesso: nota.xml,
+            dateEmissao: nota.dateEmissao,
+            value: nota.value,
+            noteNumber: nota.noteNumber,
+            corporateReason: nota.corporateReason
           };
         } catch (err) {
           console.error(`Erro ao ler o arquivo XML da nota ${nota.id}:`, err);
