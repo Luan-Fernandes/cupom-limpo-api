@@ -29,6 +29,14 @@ export class UserService {
   ): Promise<any> {
     const user = await this.userRepository.findOne({ where: { cpf } });
 
+    const emailAlreadyExists = await this.userRepository.findOne({
+      where: { email: completeRegisterDto.email }
+    })
+
+    if (emailAlreadyExists) {
+      throw new HttpException('Email ja cadastrado', HttpStatus.CONFLICT);
+    }
+
     if (!user) {
       throw new NotFoundException('Usuário não encontrado.');
     }
@@ -50,12 +58,17 @@ export class UserService {
 
   //criar user com verificação no email.
   async register(newUser: UserDto) {
-    const userAlreadyExists = await this.userRepository.findOne({
-      where: { email: newUser.email, cpf: newUser.cpf },
+    const emailAlreadyExists = await this.userRepository.findOne({
+      where: { email: newUser.email }
     });
 
-    if (userAlreadyExists) {
-      throw new HttpException('User already exists', HttpStatus.CONFLICT);
+    const cpfAlreadyExists = await this.userRepository.findOne({
+      where: { cpf: newUser.cpf }
+    });
+
+
+    if (emailAlreadyExists || cpfAlreadyExists) {
+      throw new HttpException('email ou cpf ja cadastrado', HttpStatus.CONFLICT);
     }
     if (
       !newUser.cpf ||
@@ -64,7 +77,7 @@ export class UserService {
       !newUser.username
     ) {
       throw new HttpException(
-        'All fields are required',
+        'Campos obrigatórios não preenchidos',
         HttpStatus.BAD_REQUEST,
       );
     }

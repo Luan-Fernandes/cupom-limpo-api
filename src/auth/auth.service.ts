@@ -51,8 +51,7 @@ export class AuthService {
       sub: foundUser.id,
       email: foundUser.email,
       cpf: foundUser.cpf,
-      userName: foundUser.username,
-      isVerified: foundUser.isVerified
+      userName: foundUser.username
     };
 
     const token = this.jwtService.sign(payload, { expiresIn: Number(this.jwtExpirationTimeInSeconds) });
@@ -60,7 +59,6 @@ export class AuthService {
     return { token, expiresIn: Number(this.jwtExpirationTimeInSeconds) };
   }
 
-  // consome o service de completar o cadastro para ser autenticado.
   async completeRegister(completeRegisterDto: CompleteRegisterDto): Promise<AuthResponseDto> {
     const result = await this.usersService.completeRegister(completeRegisterDto.cpf, completeRegisterDto);
     return { message: result.message, completeCadastro: false };

@@ -39,6 +39,7 @@ export class NotasService {
     return null;
   }
 
+  // Extrai a razão social do emitente
   private extractRazaoSocialEmitente(data: any): string | null {
     if (typeof data.xml === 'string') {
       try {
@@ -75,13 +76,14 @@ export class NotasService {
     return null;
   }
 
+  // Extrai o número da nota
   private extractNuberNota(data: any): string | null {
     if (typeof data.xml === 'string') {
       try {
         const xmlObject = JSON.parse(data.xml);
         return (
           xmlObject?.nfeProc?.NFe?.infNFe?.ide?.nNF ||
-          xmlObject?.NFe?.infNFe?.ide?.nNF || // Adicionando uma alternativa caso 'nfeProc' não exista diretamente
+          xmlObject?.NFe?.infNFe?.ide?.nNF ||
           null
         );
       } catch (error) {
@@ -92,13 +94,14 @@ export class NotasService {
     return null;
   }
 
+  // Extrai a data de emissão
   private extractDataEmissao(data: any): string | null {
     if (typeof data.xml === 'string') {
       try {
         const xmlObject = JSON.parse(data.xml);
         return (
           xmlObject?.nfeProc?.NFe?.infNFe?.ide?.dhEmi ||
-          xmlObject?.NFe?.infNFe?.ide?.dhEmi || // Adicionando uma alternativa caso 'nfeProc' não exista diretamente
+          xmlObject?.NFe?.infNFe?.ide?.dhEmi ||
           null
         );
       } catch (error) {
@@ -108,7 +111,8 @@ export class NotasService {
     }
     return null;
   }
-  
+
+  // Extrai o valor
   private extractValue(data: any): string | null {
     if (typeof data.xml === 'string') {
       try {
@@ -184,12 +188,34 @@ export class NotasService {
     return await this.notasRepository.save(nota);
   }
   
+  async findNotasByUserId(
+    userId: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{
+    data: any[];
+    total: number;
+    page: number;
+    lastPage: number;
+  }> {
+    const [notas, total] = await this.notasRepository.findAndCount({
+      where: { userId },
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { dateEmissao: 'DESC' },
+    });
+  
+    return {
+      data: notas,
+      total,
+      page,
+      lastPage: Math.ceil(total / limit),
+    };
+  }
+  
 
-  // Busca as notas do user.
-  async findByUserId(userId: string): Promise<any[]> {
-    const notas = await this.notasRepository.find({ where: { userId } });
-
-    const results = await Promise.all(
+  async enrichNotasWithXML(notas: any[]): Promise<any[]> {
+    return await Promise.all(
       notas.map(async (nota) => {
         try {
           const filePath = join(
@@ -201,26 +227,22 @@ export class NotasService {
             `${nota.id}.xml`,
           );
           const xmlContent = await fs.readFile(filePath, 'utf-8');
-          
+  
           return {
-            id: nota.id,
+            ...nota,
             xml: xmlContent,
-            chaveDeAcesso: nota.xml,
-            dateEmissao: nota.dateEmissao,
-            value: nota.value,
-            noteNumber: nota.noteNumber,
-            corporateReason: nota.corporateReason
+            chaveDeAcesso: nota.xml, // ou outro campo, ajuste conforme seu domínio
           };
         } catch (err) {
           console.error(`Erro ao ler o arquivo XML da nota ${nota.id}:`, err);
           return {
-            id: nota.id,
+            ...nota,
             error: 'Erro ao ler o arquivo XML',
           };
         }
       }),
     );
-
-    return results;
   }
+  
+
 }

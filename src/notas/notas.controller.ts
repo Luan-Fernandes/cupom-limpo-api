@@ -19,23 +19,17 @@ export class NotasController {
         const parser = new xml2js.Parser({ explicitArray: false });
         const xml = file.buffer.toString('utf-8');
     
-        // Converte XML para JSON usando Promise nativa do xml2js
         const jsonData = await parser.parseStringPromise(xml);
         const xmlString = JSON.stringify(jsonData);
         const id = uuidv4();
     
-        // Salva a nota no banco
         const savedNota = await this.notasService.create({ id, xml: xmlString });
     
-        // Caminho onde o arquivo XML será salvo
         const uploadDir = path.join(process.cwd(), 'uploads', 'xmls');
         const fileName = `${savedNota.id}.xml`;
         const filePath = path.join(uploadDir, fileName);
     
-        // Cria o diretório se ele não existir
         fs.mkdirSync(uploadDir, { recursive: true });
-    
-        // Escreve o arquivo XML original no disco
         fs.writeFileSync(filePath, xml);
     
         return savedNota;
@@ -46,14 +40,32 @@ export class NotasController {
     }
     @UseGuards(AuthGuard)
     @Get()
-    async findMyNotes(@Req() request: Request): Promise<Notas[]> {
+    async findMyNotes(
+      @Req() request: Request,
+      @Query('page') page: number = 1,
+      @Query('limit') limit: number = 20,
+    ) {
       const userId = request['user'].sub;
       const isVerified = request['user'].isVerified;
-
+    
       if (!isVerified) {
         throw new HttpException('User not verified', HttpStatus.BAD_REQUEST);
       }
-
-      return await this.notasService.findByUserId(userId);
+    
+      const { data, total, page: currentPage, lastPage } = await this.notasService.findNotasByUserId(
+        userId,
+        Number(page),
+        Number(limit),
+      );
+    
+      const enrichedData = await this.notasService.enrichNotasWithXML(data);
+    
+      return {
+        data: enrichedData,
+        total,
+        page: currentPage,
+        lastPage,
+      };
     }
+    
 }
