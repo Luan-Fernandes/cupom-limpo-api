@@ -47,7 +47,7 @@ export class AuthController {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new HttpException(error.message || 'Verification failed', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException(error.message || 'verificação falhou', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

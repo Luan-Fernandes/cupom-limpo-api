@@ -125,7 +125,7 @@ export class UserService {
     });
 
     if (userAlreadyExists) {
-      throw new HttpException('CPF already registered', HttpStatus.CONFLICT);
+      throw new HttpException('CPF ja cadastrado', HttpStatus.CONFLICT);
     }
 
     const newUser = new User();
@@ -133,7 +133,7 @@ export class UserService {
 
     await this.userRepository.save(newUser);
 
-    return { message: 'Pre-registration with CPF successful.' };
+    return { message: 'Usuario criado com sucesso.' };
   }
 
   // Enviar email de verificação do user
@@ -173,17 +173,15 @@ export class UserService {
   async verifyUser(token: string) {
     if (!token) {
       throw new HttpException(
-        'Verification token is required',
+        'Verificação do token falhou',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    // Busca o usuário pelo token de verificação
     const user = await this.userRepository.findOne({
       where: { verificationToken: token },
     });
 
-    // Verifica se o usuário foi encontrado
     if (!user) {
       throw new HttpException(
         'Invalid verification token',
@@ -191,11 +189,9 @@ export class UserService {
       );
     }
 
-    // Atualiza os dados do usuário
     user.isVerified = true;
     user.verificationToken = '';
 
-    // Salva as alterações no banco de dados
     await this.userRepository.save(user);
 
     return { message: 'Email verified successfully.' };
@@ -243,7 +239,7 @@ export class UserService {
       await this.mailerService.sendMail({
         to: email,
         subject: 'Redefinição de senha',
-        template: 'resetPassword', // nome do template .hbs
+        template: 'resetPassword',
         context: {
           resetLink,
           year: new Date().getFullYear(),

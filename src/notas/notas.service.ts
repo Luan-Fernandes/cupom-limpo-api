@@ -231,7 +231,7 @@ export class NotasService {
           return {
             ...nota,
             xml: xmlContent,
-            chaveDeAcesso: nota.xml, // ou outro campo, ajuste conforme seu domínio
+            chaveDeAcesso: nota.xml,
           };
         } catch (err) {
           console.error(`Erro ao ler o arquivo XML da nota ${nota.id}:`, err);
