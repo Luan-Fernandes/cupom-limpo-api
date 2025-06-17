@@ -112,14 +112,35 @@ export class NotasService {
     return null;
   }
 
+  //Extrai nome fantasia
+
+  private extractNomeFantasia(data: any): string | null {
+    if (typeof data.xml === 'string') {
+      try {
+        const xmlObject = JSON.parse(data.xml);
+        return (
+          xmlObject?.nfeProc?.NFe?.infNFe?.emit?.xFant ||
+          xmlObject?.NFe?.infNFe?.emit?.xFant ||
+          null
+        );
+      } catch (error) {
+        console.error('Erro ao extrair dados de emissão do XML:', error);
+        return null;
+      }
+    }
+    return null;
+  }
+
   // Extrai o valor
   private extractValue(data: any): string | null {
     if (typeof data.xml === 'string') {
       try {
         const xmlObject = JSON.parse(data.xml);
-        return xmlObject?.nfeProc?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
-        xmlObject?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
-        null;
+        return (
+          xmlObject?.nfeProc?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
+          xmlObject?.NFe?.infNFe?.total?.ICMSTot?.vNF ||
+          null
+        );
       } catch (error) {
         console.error('Erro ao extrair valor do XML:', error);
         return null;
@@ -159,6 +180,7 @@ export class NotasService {
     const value = this.extractValue(notasDto);
     const corporateReason = this.extractRazaoSocialEmitente(notasDto);
     const numberNota = this.extractNuberNota(notasDto);
+    const nomeFantasia = this.extractNomeFantasia(notasDto);
 
     if (!chaveDeAcesso) {
       throw new HttpException(
@@ -180,6 +202,7 @@ export class NotasService {
       dateEmissao: dateEmissao ? dateEmissao : new Date(),
       value: value ? parseFloat(value) : 0,
       noteNumber: numberNota ? numberNota : '',
+      fantasyName: nomeFantasia ? nomeFantasia : '',
       corporateReason: corporateReason ? corporateReason : '',
       userId: user.id,
       user: user,
@@ -187,7 +210,7 @@ export class NotasService {
 
     return await this.notasRepository.save(nota);
   }
-  
+
   async findNotasByUserId(
     userId: string,
     page: number = 1,
@@ -204,7 +227,7 @@ export class NotasService {
       take: limit,
       order: { dateEmissao: 'DESC' },
     });
-  
+
     return {
       data: notas,
       total,
@@ -212,7 +235,6 @@ export class NotasService {
       lastPage: Math.ceil(total / limit),
     };
   }
-  
 
   async enrichNotasWithXML(notas: any[]): Promise<any[]> {
     return await Promise.all(
@@ -227,7 +249,7 @@ export class NotasService {
             `${nota.id}.xml`,
           );
           const xmlContent = await fs.readFile(filePath, 'utf-8');
-  
+
           return {
             ...nota,
             xml: xmlContent,
@@ -243,6 +265,56 @@ export class NotasService {
       }),
     );
   }
-  
 
+  // Encontra as notas agrupadas por Nome Fantasia
+  async findNotasAgrupadasPorFantasia(
+    userId: string,
+    page = 1,
+    limit = 100,
+  ): Promise<{
+    data: Record<string, any[]>;
+    total: number;
+    page: number;
+    lastPage: number;
+  }> {
+    const {
+      data: notas,
+      total,
+      page: currentPage,
+      lastPage,
+    } = await this.findNotasByUserId(userId, page, limit);
+
+    const enriched = await this.enrichNotasWithXML(notas);
+
+    const grouped = await enriched.reduce(
+      async (accPromise, nota) => {
+        const acc = await accPromise;
+
+        try {
+          const parsedXml = await parseStringPromise(nota.xml, {
+            explicitArray: false,
+          });
+          const data = { xml: JSON.stringify(parsedXml) };
+          const nomeFantasia = this.extractNomeFantasia(data) || 'Desconhecido';
+
+          if (!acc[nomeFantasia]) acc[nomeFantasia] = [];
+          acc[nomeFantasia].push(nota);
+        } catch (err) {
+          console.error(`Erro ao processar nota ${nota.id}:`, err);
+          if (!acc['Desconhecido']) acc['Desconhecido'] = [];
+          acc['Desconhecido'].push(nota);
+        }
+
+        return acc;
+      },
+      Promise.resolve({} as Record<string, any[]>),
+    );
+
+    return {
+      data: grouped,
+      total,
+      page: currentPage,
+      lastPage,
+    };
+  }
 }

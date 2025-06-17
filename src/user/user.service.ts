@@ -30,8 +30,8 @@ export class UserService {
     const user = await this.userRepository.findOne({ where: { cpf } });
 
     const emailAlreadyExists = await this.userRepository.findOne({
-      where: { email: completeRegisterDto.email }
-    })
+      where: { email: completeRegisterDto.email },
+    });
 
     if (emailAlreadyExists) {
       throw new HttpException('Email ja cadastrado', HttpStatus.CONFLICT);
@@ -58,18 +58,6 @@ export class UserService {
 
   //criar user com verificação no email.
   async register(newUser: UserDto) {
-    const emailAlreadyExists = await this.userRepository.findOne({
-      where: { email: newUser.email }
-    });
-
-    const cpfAlreadyExists = await this.userRepository.findOne({
-      where: { cpf: newUser.cpf }
-    });
-
-
-    if (emailAlreadyExists || cpfAlreadyExists) {
-      throw new HttpException('email ou cpf ja cadastrado', HttpStatus.CONFLICT);
-    }
     if (
       !newUser.cpf ||
       !newUser.email ||
@@ -80,6 +68,36 @@ export class UserService {
         'Campos obrigatórios não preenchidos',
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    console.log('Dados recebidos para cadastro:', newUser);
+
+    const existingUser = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.email ILIKE :email OR user.cpf ILIKE :cpf', {
+        email: newUser.email,
+        cpf: newUser.cpf,
+      })
+      .getOne();
+
+    console.log('existingUser:', existingUser);
+
+    if (existingUser) {
+      if (
+        existingUser.email.toLowerCase() === newUser.email.toLowerCase() &&
+        existingUser.cpf.toLowerCase() === newUser.cpf.toLowerCase()
+      ) {
+        throw new HttpException(
+          'Email e CPF já cadastrados',
+          HttpStatus.CONFLICT,
+        );
+      }
+      if (existingUser.email.toLowerCase() === newUser.email.toLowerCase()) {
+        throw new HttpException('Email já cadastrado', HttpStatus.CONFLICT);
+      }
+      if (existingUser.cpf.toLowerCase() === newUser.cpf.toLowerCase()) {
+        throw new HttpException('CPF já cadastrado', HttpStatus.CONFLICT);
+      }
     }
 
     const dbUser = new User();
@@ -138,9 +156,11 @@ export class UserService {
 
   // Enviar email de verificação do user
   async sendVerificationEmail(user: User) {
-    const frontendUrl = this.configService.get<string>('VERIFICATION_EMAIL_URL');
+    const frontendUrl = this.configService.get<string>(
+      'VERIFICATION_EMAIL_URL',
+    );
     const verificationLink = `${frontendUrl}/auth/verify?token=${user.verificationToken}`;
-  
+
     try {
       await this.mailerService.sendMail({
         to: user.email,
@@ -152,9 +172,9 @@ export class UserService {
           year: new Date().getFullYear(),
         },
       });
-  
+
       console.log(`Email de verificação enviado para ${user.email}`);
-  
+
       return {
         success: true,
         message: 'Email de verificação enviado com sucesso',
@@ -167,7 +187,6 @@ export class UserService {
       );
     }
   }
-  
 
   //verificar email do user.
   async verifyUser(token: string) {
@@ -233,8 +252,7 @@ export class UserService {
   //Enviar email de redefinição de senha.
   async sendResetPasswordEmail(email: string, token: string) {
     const frontendUrl = this.configService.get<string>('RESET_PASSWORD_URL');
-    const resetLink = `${frontendUrl}/user/reset-password/${token}`;
-  
+    const resetLink = `${frontendUrl}/reset-senha/${token}`;
     try {
       await this.mailerService.sendMail({
         to: email,
@@ -245,7 +263,7 @@ export class UserService {
           year: new Date().getFullYear(),
         },
       });
-  
+
       console.log(`Email de redefinição de senha enviado para ${email}`);
     } catch (error) {
       console.error('Erro ao enviar email de redefinição de senha:', error);

@@ -29,5 +29,9 @@ export class NotasDto {
   
     @IsOptional()
     corporateReason?: string;
+
+    @IsOptional()
+    fantasyName?: string;
+    
   }
   

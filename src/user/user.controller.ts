@@ -33,14 +33,14 @@ export class UserController {
   async forgotPassword(@Body('email') email: string) {
     const token = await this.userService.generateResetToken(email);
     await this.userService.sendResetPasswordEmail(email, token);
-    return { message: 'Reset link sent to your email.' };
+    return { message: 'Reset link sent to your email.', };
   }
 
   //validar token de redefinição de senha.
   @Get('reset-password/:token')
   async validateToken(@Param('token') token: string) {
     await this.userService.validateResetToken(token);
-    return { message: 'Token valid.' };
+    return { message: 'Token valid.'};
   }
 
   //redefinir senha do user.

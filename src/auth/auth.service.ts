@@ -51,7 +51,8 @@ export class AuthService {
       sub: foundUser.id,
       email: foundUser.email,
       cpf: foundUser.cpf,
-      userName: foundUser.username
+      userName: foundUser.username,
+      isVerified: foundUser.isVerified
     };
 
     const token = this.jwtService.sign(payload, { expiresIn: Number(this.jwtExpirationTimeInSeconds) });

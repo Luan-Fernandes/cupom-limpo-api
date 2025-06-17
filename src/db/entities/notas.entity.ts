@@ -27,6 +27,9 @@ export class Notas {
   @Column({ type: 'varchar', nullable: true })
   corporateReason: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  fantasyName: string;
+
   @Column({ type: 'uuid' })
   userId: string;
 
